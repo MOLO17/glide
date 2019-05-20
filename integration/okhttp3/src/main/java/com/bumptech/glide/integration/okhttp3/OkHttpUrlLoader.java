@@ -1,6 +1,7 @@
 package com.bumptech.glide.integration.okhttp3;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import com.bumptech.glide.load.Options;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.ModelLoader;
@@ -16,11 +17,13 @@ import okhttp3.OkHttpClient;
 public class OkHttpUrlLoader implements ModelLoader<GlideUrl, InputStream> {
 
   private final Call.Factory client;
+  @Nullable private final RequestBuilderInterceptor interceptor;
 
   // Public API.
   @SuppressWarnings("WeakerAccess")
-  public OkHttpUrlLoader(@NonNull Call.Factory client) {
+  public OkHttpUrlLoader(@NonNull Call.Factory client, @Nullable RequestBuilderInterceptor interceptor) {
     this.client = client;
+    this.interceptor = interceptor;
   }
 
   @Override
@@ -31,7 +34,7 @@ public class OkHttpUrlLoader implements ModelLoader<GlideUrl, InputStream> {
   @Override
   public LoadData<InputStream> buildLoadData(@NonNull GlideUrl model, int width, int height,
       @NonNull Options options) {
-    return new LoadData<>(model, new OkHttpStreamFetcher(client, model));
+    return new LoadData<>(model, new OkHttpStreamFetcher(client, model, width, height, interceptor));
   }
 
   /**
@@ -42,6 +45,7 @@ public class OkHttpUrlLoader implements ModelLoader<GlideUrl, InputStream> {
   public static class Factory implements ModelLoaderFactory<GlideUrl, InputStream> {
     private static volatile Call.Factory internalClient;
     private final Call.Factory client;
+    @Nullable private final RequestBuilderInterceptor interceptor;
 
     private static Call.Factory getInternalClient() {
       if (internalClient == null) {
@@ -58,7 +62,7 @@ public class OkHttpUrlLoader implements ModelLoader<GlideUrl, InputStream> {
      * Constructor for a new Factory that runs requests using a static singleton client.
      */
     public Factory() {
-      this(getInternalClient());
+      this(getInternalClient(), null);
     }
 
     /**
@@ -66,14 +70,15 @@ public class OkHttpUrlLoader implements ModelLoader<GlideUrl, InputStream> {
      *
      * @param client this is typically an instance of {@code OkHttpClient}.
      */
-    public Factory(@NonNull Call.Factory client) {
+    public Factory(@NonNull Call.Factory client, @Nullable RequestBuilderInterceptor interceptor) {
       this.client = client;
+      this.interceptor = interceptor;
     }
 
     @NonNull
     @Override
     public ModelLoader<GlideUrl, InputStream> build(MultiModelLoaderFactory multiFactory) {
-      return new OkHttpUrlLoader(client);
+      return new OkHttpUrlLoader(client, interceptor);
     }
 
     @Override

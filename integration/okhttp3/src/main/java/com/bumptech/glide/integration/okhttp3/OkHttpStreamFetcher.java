@@ -1,6 +1,7 @@
 package com.bumptech.glide.integration.okhttp3;
 
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import com.bumptech.glide.Priority;
 import com.bumptech.glide.load.DataSource;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import okhttp3.Call;
+import okhttp3.Call.Factory;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
@@ -31,11 +33,21 @@ public class OkHttpStreamFetcher implements DataFetcher<InputStream>, okhttp3.Ca
   // accesses to variables may occur on different threads, but only one at a time.
   private volatile Call call;
 
+  private final int width;
+  private final int height;
+  @Nullable private final RequestBuilderInterceptor interceptor;
+
   // Public API.
   @SuppressWarnings("WeakerAccess")
-  public OkHttpStreamFetcher(Call.Factory client, GlideUrl url) {
+  public OkHttpStreamFetcher(
+      Factory client, GlideUrl url, int width, int height,
+      @Nullable RequestBuilderInterceptor interceptor
+  ) {
     this.client = client;
     this.url = url;
+    this.width = width;
+    this.height = height;
+    this.interceptor = interceptor;
   }
 
   @Override
@@ -45,6 +57,9 @@ public class OkHttpStreamFetcher implements DataFetcher<InputStream>, okhttp3.Ca
     for (Map.Entry<String, String> headerEntry : url.getHeaders().entrySet()) {
       String key = headerEntry.getKey();
       requestBuilder.addHeader(key, headerEntry.getValue());
+    }
+    if (interceptor != null) {
+      interceptor.interceptBuilder(requestBuilder, width, height);
     }
     Request request = requestBuilder.build();
     this.callback = callback;
